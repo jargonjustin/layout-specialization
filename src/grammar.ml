@@ -2,8 +2,6 @@
 open Ast
 open Util
 
-(** {1 Exceptions} *)
-
 exception Invalid_grammar of string
 
 let invalid msg =
@@ -12,8 +10,6 @@ let invalid msg =
 (* TODO: This should really be a macro *)
 let illegal cond msg =
    if cond then invalid msg
-
-(** {1 Parsing} *)
 
 let parse_channel channel =
    let lexbuf = Lexing.from_channel channel in
@@ -24,8 +20,6 @@ let parse_channel channel =
 
 let parse_file filename =
    parse_channel (open_in filename)
-
-(** {1 Validation and Type Checking} *)
 
 (** Organizes attribute definitions by (synthesized attr -> def, child -> inherited attr -> def) *)
 let definitions klass =
@@ -280,8 +274,7 @@ let plan_evaluation contracts klass =
           | Some cyclic_path -> Left cyclic_path in
    
    (* Checks if an evaluation step is actually in the classes evaluation order. We need to do this
-      in order to remove the synthesized attributes of child nodes that were added to achieve the
-      correct child evaluation order *)
+      in order to remove attributes the class depends upon, but does not evaluate itself*)
    let is_part_of_evaluation_plan =
       let definitions =
          let fold_defs acc (attr_ref, _) = AttrRefSet.add attr_ref acc in
@@ -298,6 +291,7 @@ let plan_evaluation contracts klass =
          invalid ("The dependencies of " ^ klass.name ^ " include the cycle " ^ cycle_string)
     | Right ordering -> List.filter is_part_of_evaluation_plan ordering
 
+(** Analyzes a grammar to ensure that it is valid, and returns a map of evaluation orders for the classes in the grammar *)
 let analyze ifaces klasses =
    let grammar_contracts = contracts ifaces klasses in
    List.iter (typecheck grammar_contracts) klasses;
@@ -306,6 +300,7 @@ let analyze ifaces klasses =
       List.fold_left fold_ordering StringMap.empty klasses in
    orderings
 
+(** Dumps a representation of a class to an output channel *)
 let pretty_print out klass =
    Printf.fprintf out "class %s " klass.name;
    if not (ListExt.is_empty klass.interfaces) then
@@ -313,5 +308,6 @@ let pretty_print out klass =
    Printf.fprintf out "{\n";
    List.iter (fun field -> Printf.fprintf out "   float %s;\n" field) klass.fields;
    List.iter (fun (child, child_type) -> Printf.fprintf out "   %s %s;\n" child_type child) klass.children;
+   output_char out '\n';
    List.iter (fun (attr_ref, expr) -> Printf.fprintf out "   def %s = %s;\n" (string_of_attr attr_ref) (string_of_expr expr)) klass.definitions;
    Printf.fprintf out "};\n"

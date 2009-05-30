@@ -1,3 +1,4 @@
+(** The Util module collects all of the functionality that really should have been in the standard library *)
 
 module OrderedString =
    struct
@@ -8,7 +9,6 @@ module OrderedString =
 module StringSet = Set.Make(OrderedString)
 module StringMap = Map.Make(OrderedString)
 
-(** E *)
 module ListExt =
    struct
       let filter_map f xs =
