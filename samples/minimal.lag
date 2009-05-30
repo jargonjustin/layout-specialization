@@ -1,0 +1,39 @@
+
+interface Node {
+   inherit @width;
+   synthesize @height;
+   inherit @x;
+   inherit @y;
+};
+
+class Div : Node {
+   float margin;
+   Node top;
+   Node bottom;
+   
+   def top@width = @width - 2 * margin;
+   def bottom@width = @width - 2 * margin;
+   
+   def @height = margin + top@height + bottom@height + margin;
+   
+   def top@x = @x + margin;
+   def top@y = @y + margin;
+   def bottom@x = @x + margin;
+   def bottom@y = @y + top@height;
+};
+
+class Text : Node {
+   float margin;
+   
+   def @height = margin + @width / 2 + margin;
+};
+
+class Window {
+   Node root;
+   float width;
+
+   def root@width = width;
+   def root@x = 0;
+   def root@y = 0;
+};
+

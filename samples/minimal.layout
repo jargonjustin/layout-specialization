@@ -1,0 +1,32 @@
+{Window
+   width: 800;
+   root: {Div
+      margin: 10;
+      top: {Div
+         margin: 10;
+         top: {Div
+            margin: 10;
+            top: {Text margin: 10; };
+            bottom: {Text margin: 10; };
+         };
+         bottom: {Div
+            margin: 10;
+            top: {Text margin: 10; };
+            bottom: {Text margin: 10; };
+         };
+      };
+      bottom: {Div
+         margin: 10;
+         top: {Div
+            margin: 10;
+            top: {Text margin: 10; };
+            bottom: {Text margin: 10; };
+         };
+         bottom: {Div
+            margin: 10;
+            top: {Text margin: 10; };
+            bottom: {Text margin: 10; };
+         };
+      };
+   };
+}

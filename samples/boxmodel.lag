@@ -1,0 +1,36 @@
+
+interface Node {
+   inherit @width;
+   synthesize @height;
+   inherit @x;
+   inherit @y;
+};
+
+class Div : Node {
+   float margin;
+   Node children[];
+   
+   def children[i]@width = @width - 2 * margin;
+   
+   /* TODO: figure out how to do sequence iteration and traversal */
+   def @height = margin + sum(children@height);
+   
+   def children[i]@x = @x + margin;
+   def children[0]@y = @y + margin;
+   def children[i]@y = children[i-1]@y + children[i-1]@height;
+};
+
+class Text : Node {
+   float margin;
+   
+   def @height = margin + @width / 2 + margin;
+};
+
+class Window {
+   float width;
+   Node root;
+   
+   def root@width = width;
+   def root@x = 0;
+   def root@y = 0;
+};
