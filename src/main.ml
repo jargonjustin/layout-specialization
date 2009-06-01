@@ -24,8 +24,8 @@ let log str =
       prerr_endline str
 
 (** Dumps grammar dependency information to a channel as a GraphViz graph *)
-let dump_dependencies ifaces klasses contracts out =
-   Grammar.graph_dependencies out ifaces klasses contracts
+let dump_dependencies klasses contracts out =
+   Grammar.graph_dependencies out klasses contracts
 
 let dump_dataflow tree out =
    ()
@@ -41,7 +41,7 @@ let run grammar data depsdump flowdump codedump treedump =
       (* Parse and analyze the grammar *)
       let (ifaces, klasses) = Grammar.parse_channel grammar in
       let (contracts, orderings) = Grammar.analyze ifaces klasses in
-      maybe () (dump_dependencies ifaces klasses contracts) depsdump;
+      maybe () (dump_dependencies klasses contracts) depsdump;
       
       (* Parse the data tree *)
       let tree = Data.parse_channel klasses data in

@@ -314,7 +314,7 @@ let pretty_print out klass =
    Printf.fprintf out "};\n"
 
 (** Dumps grammar dependency information to a channel as a GraphViz graph *)
-let graph_dependencies out ifaces klasses contracts =
+let graph_dependencies out klasses contracts =
    let get_id =
       let last_id = ref 0 in
       fun () -> incr last_id; !last_id in
