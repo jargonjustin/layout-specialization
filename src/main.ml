@@ -1,12 +1,14 @@
+
 open Util
+open Ast
 
-let profile = ref false
-let dump_tree = ref false
-let dump_insts = ref false
+let timings = ref false
 let verbose = ref false
+let specialize = ref true
 
+(** Logs execution times to stderr if timing is enabled *)
 let time name thunk =
-   if !profile then
+   if !timings then
       let began = Sys.time () in
       let result = thunk () in
       let elapsed = Sys.time () -. began in
@@ -16,42 +18,101 @@ let time name thunk =
    else
       thunk ()
 
-let benchmark grammar_filename data_filename =
+(** Logs to stderr if verbose logging is enabled *)
+let log str =
+   if !verbose then
+      prerr_endline str
+
+(** Dumps grammar dependency information to a channel as a GraphViz graph *)
+let dump_dependencies ifaces klasses contracts out =
+   let get_id =
+      let last_id = ref 0 in
+      fun () -> incr last_id; !last_id in
+   
+   Printf.fprintf out "digraph dependencies {\n";
+   
+   ListExt.for_each klasses (fun klass ->
+      Printf.fprintf out "\tsubgraph cluster%s {\n" klass.name;
+      Printf.fprintf out "\t\tlabel=\"%s\";\n" klass.name;
+      
+      let (nodes, edges) = Grammar.dependency_graph contracts klass in
+      
+      let ids = Hashtbl.create (List.length nodes) in
+      ListExt.for_each nodes (fun node ->
+         let id = get_id () in
+         Hashtbl.replace ids node id;
+         Printf.printf "\t\tn%i [label=\"%s\"];\n" id (string_of_eval_step node));
+      
+      ListExt.for_each edges (fun (initial, target) ->
+         Printf.printf "\t\tn%i -> n%i;\n" (Hashtbl.find ids initial) (Hashtbl.find ids target));
+      
+      Printf.fprintf out "\t};\n");
+      
+   Printf.fprintf out "}\n"
+
+let dump_dataflow tree out =
+   ()
+
+let dump_instructions bytecode out =
+   ()
+
+let dump_annotated tree out =
+   Data.pretty_print out tree
+
+let run grammar data depsdump flowdump codedump treedump =
    try
-      let (ifaces, klasses) = Grammar.parse_file grammar_filename in
-      let orderings = Grammar.analyze ifaces klasses in
-      let data = Data.parse_file klasses data_filename in
-      let instructions = time "Compilation" (fun () -> StreamExt.elements (Data.compile klasses orderings data)) in
-      let specialized = time "Specialization" (fun () -> StreamExt.elements (Spec.specialize (Stream.of_list instructions))) in
-      time "Execution" (fun () -> Spec.interpret (Stream.of_list instructions));
-      if !verbose then
-         (Printf.eprintf "Naïve compilation produced %i attribute assignments\n" (List.length instructions);
-          Printf.eprintf "Specialization kept %i attribute assignments\n" (List.length specialized);
-          flush stderr);
-      if !dump_insts then
-         (Printf.eprintf "Unspecialized instructions:\n"; Spec.examine stderr (Stream.of_list instructions);
-          Printf.eprintf "Specialized instructions:\n"; Spec.examine stderr (Stream.of_list specialized);
-          flush stderr);
-      if !dump_tree then
-         Data.pretty_print stdout data;
+      (* Parse and analyze the grammar *)
+      let (ifaces, klasses) = Grammar.parse_channel grammar in
+      let (contracts, orderings) = Grammar.analyze ifaces klasses in
+      maybe () (dump_dependencies ifaces klasses contracts) depsdump;
+      
+      (* Parse the data tree *)
+      let tree = Data.parse_channel klasses data in
+      maybe () (dump_dataflow tree) flowdump;
+      
+      (* Compile and specialize to intermediate code *)
+      let bytecode = ref (time "Compilation" (fun () -> StreamExt.elements (Data.compile klasses orderings tree))) in
+      log ("Compilation produced " ^ string_of_int (List.length !bytecode) ^ " attribute assignments");
+      if !specialize then
+         (bytecode := time "Specialization" (fun () -> StreamExt.elements (Spec.specialize (Stream.of_list !bytecode)));
+          log ("Specialization kept " ^ string_of_int (List.length !bytecode) ^ " attribute assignments"));
+      maybe () (dump_instructions bytecode) codedump;
+      
+      (* Perform any dynamic execution to finish annotation *)
+      time "Execution" (fun () -> Spec.interpret (Stream.of_list !bytecode));
+      maybe () (dump_annotated tree) treedump
    with
     | Grammar.Invalid_grammar err -> prerr_endline ("error: " ^ err); exit 1
     | Data.Parse_error err -> prerr_endline ("error: " ^ err); exit 1
 
 let main () =
-   let args = ref [] in
+   try
+      let dependency_channel = ref None in
+      let dataflow_channel = ref None in
+      let bytecode_channel = ref None in
+      let annotated_channel = ref None in
    
-   let usage = "Usage: " ^ Sys.argv.(0) ^ " [options] grammar data" in
-   let spec = Arg.align [
-      ("-p", Arg.Set profile, " Displaying profiling information while executing");
-      ("-d", Arg.Set dump_tree, " Display annotated tree after execution");
-      ("-v", Arg.Set verbose, " Display statistics during execution");
-      ("-i", Arg.Set dump_insts, " Display intermediate code")
-   ] in
-   Arg.parse spec (fun arg -> args := arg :: !args) usage;
+      let usage = "Usage: " ^ Sys.argv.(0) ^ " [options] grammar treefile" in
+      let args =
+         let set_channel oref = Arg.String (fun file -> oref := Some (if file = "-" then stdout else open_out file)) in
+         Arg.align [
+            ("-t",    Arg.Set timings,                        " Display execution time information");
+            ("-v",    Arg.Set verbose,                        " Display verbose statistics");
+            ("-n",    Arg.Clear specialize,                   " Do not perform specialization");
+            ("-deps", set_channel dependency_channel, "filename Dump a dependency graph of the grammar");
+            ("-flow", set_channel dataflow_channel,   "filename Dump a dataflow graph of the tree");
+            ("-code", set_channel bytecode_channel,   "filename Dump the intermediate code");
+            ("-tree", set_channel annotated_channel,  "filename Dump the annotated tree")
+         ] in
    
-   match !args with
-    | [data; grammar] -> benchmark grammar data
-    | _ -> Arg.usage spec usage
+      let rest = ref [] in
+      Arg.parse args (fun anon -> rest := anon :: !rest) usage;
+   
+      match !rest with
+       | [data_filename; grammar_filename] ->
+          run (open_in grammar_filename) (open_in data_filename) !dependency_channel !dataflow_channel !bytecode_channel !annotated_channel
+       | _ -> Arg.usage args usage
+   with
+    | Sys_error err -> prerr_endline ("error: " ^ err); exit 1
 
 let _ = main ()

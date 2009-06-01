@@ -9,4 +9,4 @@ main.native: src/*
 	ocamlbuild ${BUILDFLAGS} src/main.native
 
 test: main.native
-	OCAMLRUNPARAM='b' ./main.native -v -p samples/minimal.lag samples/minimal.layout
+	OCAMLRUNPARAM='b' ./main.native -t -v samples/minimal.lag samples/minimal.layout
