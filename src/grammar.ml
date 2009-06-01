@@ -299,7 +299,7 @@ let analyze ifaces klasses =
    let orderings =
       let fold_ordering acc klass = StringMap.add klass.name (plan_evaluation grammar_contracts klass) acc in
       List.fold_left fold_ordering StringMap.empty klasses in
-   orderings
+   (grammar_contracts, orderings)
 
 (** Dumps a representation of a class to an output channel *)
 let pretty_print out klass =
