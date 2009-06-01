@@ -46,6 +46,10 @@ type ('a, 'b) either
  = Left of 'a
  | Right of 'b
 
+let maybe z f = function
+ | Some x -> f x
+ | None -> z
+
 module StreamExt =
    struct
       let rec map f = function
