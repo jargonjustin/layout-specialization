@@ -152,42 +152,43 @@ let typecheck contracts klass =
       AttrRefSet.iter (fun attr_ref -> invalid ("The definition of " ^ string_of_attr attr ^ " in " ^ klass.name ^ " references non-existant attribute " ^ string_of_attr attr_ref))
                       (AttrRefSet.diff (attribute_dependencies expr) valid_attrs))
 
+(** Calculates a dependency graph for the evaluation order of attributes and child nodes *)
+let dependency_graph contracts klass =
+   let vertices =
+      let children = List.map (fun (child, _) -> EvalChild child) klass.children in
+      let attributes = 
+         let attributes_for_child (child, child_type) =
+            let fold_attribute attr acc = EvalAttr (ChildAttrRef (child, attr)) :: acc in
+            let (synthesized, inherited) = StringMap.find child_type contracts in
+            List.append (StringSet.fold fold_attribute synthesized [])
+                        (StringSet.fold fold_attribute inherited []) in
+         let child_attributes = ListExt.concat_map attributes_for_child klass.children in
+         let self_attributes =
+            let fold_self_attributes attr acc = EvalAttr (SelfAttrRef attr) :: acc in
+            let (synthesized, inherited) = StringMap.find klass.name contracts in
+            StringSet.fold fold_self_attributes (StringSet.union synthesized inherited) [] in
+         List.append self_attributes child_attributes in
+      List.append children attributes in
+   let edges =
+      (** Contractual edges enforce that the synthesized attributes of child nodes can only be evaluation after
+          the child node, and that the inherited attributes of a child node must be evaluated before that child
+          node. That is, inherited attributes -> child node -> synthesized attributes. *)
+      let contractual_edges (child, child_type) =
+         let eval_child = EvalChild child in
+         let (synthesized, inherited) = StringMap.find child_type contracts in
+         List.append (StringSet.fold (fun attr acc -> (eval_child, EvalAttr (ChildAttrRef (child, attr))) :: acc) synthesized [])
+                     (StringSet.fold (fun attr acc -> (EvalAttr (ChildAttrRef (child, attr)), eval_child) :: acc) inherited []) in
+      (** An attribute depends upon all of the attributes in its definition *)
+      let definition_edges (dependent_attr_ref, expr) =
+         let dependent = EvalAttr dependent_attr_ref in
+         let depends = attribute_dependencies expr in
+         AttrRefSet.fold (fun dependency acc -> (EvalAttr dependency, dependent) :: acc) depends [] in
+      List.append (ListExt.concat_map contractual_edges klass.children)
+                  (ListExt.concat_map definition_edges klass.definitions) in
+   (vertices, edges)
+
 (** Determines an evaluation order for the attributes and children of a class *)
 let plan_evaluation contracts klass =
-   (** Calculates a dependency graph for the evaluation order of attributes and child nodes *)
-   let dependency_graph contracts klass =
-      let vertices =
-         let children = List.map (fun (child, _) -> EvalChild child) klass.children in
-         let attributes = 
-            let attributes_for_child (child, child_type) =
-               let fold_attribute attr acc = EvalAttr (ChildAttrRef (child, attr)) :: acc in
-               let (synthesized, inherited) = StringMap.find child_type contracts in
-               List.append (StringSet.fold fold_attribute synthesized [])
-                           (StringSet.fold fold_attribute inherited []) in
-            let child_attributes = ListExt.concat_map attributes_for_child klass.children in
-            let self_attributes =
-               let fold_self_attributes attr acc = EvalAttr (SelfAttrRef attr) :: acc in
-               let (synthesized, inherited) = StringMap.find klass.name contracts in
-               StringSet.fold fold_self_attributes (StringSet.union synthesized inherited) [] in
-            List.append self_attributes child_attributes in
-         List.append children attributes in
-      let edges =
-         (** Contractual edges enforce that the synthesized attributes of child nodes can only be evaluation after
-             the child node, and that the inherited attributes of a child node must be evaluated before that child
-             node. That is, inherited attributes -> child node -> synthesized attributes. *)
-         let contractual_edges (child, child_type) =
-            let eval_child = EvalChild child in
-            let (synthesized, inherited) = StringMap.find child_type contracts in
-            List.append (StringSet.fold (fun attr acc -> (eval_child, EvalAttr (ChildAttrRef (child, attr))) :: acc) synthesized [])
-                        (StringSet.fold (fun attr acc -> (EvalAttr (ChildAttrRef (child, attr)), eval_child) :: acc) inherited []) in
-         (** An attribute depends upon all of the attributes in its definition *)
-         let definition_edges (dependent_attr_ref, expr) =
-            let dependent = EvalAttr dependent_attr_ref in
-            let depends = attribute_dependencies expr in
-            AttrRefSet.fold (fun dependency acc -> (EvalAttr dependency, dependent) :: acc) depends [] in
-         List.append (ListExt.concat_map contractual_edges klass.children)
-                     (ListExt.concat_map definition_edges klass.definitions) in
-      (vertices, edges) in
    
    (** Transforms a graph into an adjacency list representation *)
    let adjacency_list (vertices, edges) =
