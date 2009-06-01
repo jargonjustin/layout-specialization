@@ -244,7 +244,7 @@ let plan_evaluation contracts klass =
             func (ListExt.pop xs)
          done in
       
-      (* Checks if a node is terminal (no incident edges) *)
+      (* Checks if a node is terminal (no incoming edges) *)
       let is_terminal node = 
          not (Hashtbl.fold (fun _ targets acc -> acc || List.mem node targets) adjlist false) in
       (* Checks if the graph contains any edges *)
@@ -284,7 +284,7 @@ let plan_evaluation contracts klass =
        | EvalAttr attr_ref -> AttrRefSet.mem attr_ref definitions
        | _ -> true in
    
-   (** A valid evaluation order is any topological sort of the evaluation dependencies *)
+   (* A valid evaluation order is any topological sort of the evaluation dependencies *)
    let adjlist = adjacency_list (dependency_graph contracts klass) in
    match topological_sort adjlist with
     | Left cyclic_path ->
