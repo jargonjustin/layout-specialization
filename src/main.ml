@@ -54,7 +54,7 @@ let dump_dataflow tree out =
    ()
 
 let dump_instructions bytecode out =
-   ()
+   Spec.examine out (Stream.of_list bytecode)
 
 let dump_annotated tree out =
    Data.pretty_print out tree
@@ -76,7 +76,7 @@ let run grammar data depsdump flowdump codedump treedump =
       if !specialize then
          (bytecode := time "Specialization" (fun () -> StreamExt.elements (Spec.specialize (Stream.of_list !bytecode)));
           log ("Specialization kept " ^ string_of_int (List.length !bytecode) ^ " attribute assignments"));
-      maybe () (dump_instructions bytecode) codedump;
+      maybe () (dump_instructions !bytecode) codedump;
       
       (* Perform any dynamic execution to finish annotation *)
       time "Execution" (fun () -> Spec.interpret (Stream.of_list !bytecode));
