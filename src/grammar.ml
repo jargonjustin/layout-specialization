@@ -312,3 +312,30 @@ let pretty_print out klass =
    output_char out '\n';
    List.iter (fun (attr_ref, expr) -> Printf.fprintf out "   def %s = %s;\n" (string_of_attr attr_ref) (string_of_expr expr)) klass.definitions;
    Printf.fprintf out "};\n"
+
+(** Dumps grammar dependency information to a channel as a GraphViz graph *)
+let graph_dependencies out ifaces klasses contracts =
+   let get_id =
+      let last_id = ref 0 in
+      fun () -> incr last_id; !last_id in
+
+   Printf.fprintf out "digraph dependencies {\n";
+
+   ListExt.for_each klasses (fun klass ->
+      Printf.fprintf out "\tsubgraph cluster%s {\n" klass.name;
+      Printf.fprintf out "\t\tlabel=\"%s\";\n" klass.name;
+
+      let (nodes, edges) = Grammar.dependency_graph contracts klass in
+
+      let ids = Hashtbl.create (List.length nodes) in
+      ListExt.for_each nodes (fun node ->
+         let id = get_id () in
+         Hashtbl.replace ids node id;
+         Printf.printf "\t\tn%i [label=\"%s\"];\n" id (string_of_eval_step node));
+
+      ListExt.for_each edges (fun (initial, target) ->
+         Printf.printf "\t\tn%i -> n%i;\n" (Hashtbl.find ids initial) (Hashtbl.find ids target));
+
+      Printf.fprintf out "\t};\n");
+
+   Printf.fprintf out "}\n"
