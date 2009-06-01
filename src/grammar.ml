@@ -325,7 +325,7 @@ let graph_dependencies out ifaces klasses contracts =
       Printf.fprintf out "\tsubgraph cluster%s {\n" klass.name;
       Printf.fprintf out "\t\tlabel=\"%s\";\n" klass.name;
 
-      let (nodes, edges) = Grammar.dependency_graph contracts klass in
+      let (nodes, edges) = dependency_graph contracts klass in
 
       let ids = Hashtbl.create (List.length nodes) in
       ListExt.for_each nodes (fun node ->
