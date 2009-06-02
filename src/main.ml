@@ -60,7 +60,9 @@ let run grammar data depsdump flowdump codedump treedump =
       
       (* Perform any dynamic execution to finish annotation *)
       time "Execution" (fun () -> Spec.interpret (Stream.of_list !bytecode));
-      maybe () (dump_annotated tree) treedump
+      maybe () (dump_annotated tree) treedump;
+      
+      Render.run tree
    with
     | Grammar.Invalid_grammar err -> prerr_endline ("error: " ^ err); exit 1
     | Data.Parse_error err -> prerr_endline ("error: " ^ err); exit 1
