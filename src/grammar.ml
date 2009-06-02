@@ -93,6 +93,17 @@ let contracts ifaces klasses =
    let interface_contracts = List.fold_left fold_interfaces StringMap.empty ifaces in
    List.fold_left (fold_klasses interface_contracts) interface_contracts klasses
 
+(** Lists all possible attribute references for a given class *)
+let attribute_references contracts klass =
+   let references f type_name acc =
+      let (synthesized, inherited) = StringMap.find type_name contracts in
+      StringSet.fold (fun attr acc -> f attr :: acc) (StringSet.union synthesized inherited) acc in
+   let self_references acc type_name =
+      references (fun attr -> SelfAttrRef attr) type_name acc in
+   let child_references acc (child, child_type) =
+      references (fun attr -> ChildAttrRef (child, attr)) child_type acc in
+   self_references (List.fold_left child_references [] klass.children) klass.name
+
 (** Calculates the set of attributes an expression depends upon *)
 let rec attribute_dependencies = function
  | Literal _ | FieldRef _ -> AttrRefSet.empty

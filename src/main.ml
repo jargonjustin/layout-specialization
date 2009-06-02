@@ -27,12 +27,15 @@ let log str =
 let dump_dependencies klasses contracts out =
    Grammar.graph_dependencies out klasses contracts
 
-let dump_dataflow tree out =
-   ()
+(** Dumps attribute and dynamic dependency information to a channel as a GraphViz graph *)
+let dump_dataflow klasses contracts orderings tree out =
+   Data.graph out klasses contracts orderings tree
 
+(** Dumps a readable representation of a list of intermediate code instructions to a channel *)
 let dump_instructions bytecode out =
    Spec.examine out (Stream.of_list bytecode)
 
+(** Dumps a data tree with attributes to a channel *)
 let dump_annotated tree out =
    Data.pretty_print out tree
 
@@ -45,7 +48,7 @@ let run grammar data depsdump flowdump codedump treedump =
       
       (* Parse the data tree *)
       let tree = Data.parse_channel klasses data in
-      maybe () (dump_dataflow tree) flowdump;
+      maybe () (dump_dataflow klasses contracts orderings tree) flowdump;
       
       (* Compile and specialize to intermediate code *)
       let bytecode = ref (time "Compilation" (fun () -> StreamExt.elements (Data.compile klasses orderings tree))) in

@@ -102,3 +102,75 @@ let pretty_print out data =
       print_indent indent;
       output_string out "}" in
    pp 0 data; output_string out "\n"; flush out
+
+(** Prints a GraphViz formatted graph showing how attributes depend upon each other and dynamicism flows through the tree *)
+let graph out klasses contracts orderings tree =
+   (** Resolves an attribute reference to a (node, attribute) pair given a context and a reference *)
+   let resolve_reference context = function
+    | ChildAttrRef (child_name, attr) ->
+         let Instance (klass, _, children, _) = context in
+         let child_node = try Hashtbl.find children child_name
+            with Not_found -> failwith ("Instance of " ^ klass ^ " missing child named " ^ child_name) in
+         (child_node, attr)
+    | SelfAttrRef (attr) ->
+         (context, attr) in
+   (** Looks up a class by name *)
+   let lookup_class name =
+      List.find (fun klass -> klass.name = name) klasses in
+   (** Checks if an attribute definition is dynamic in a particular context *)
+   let is_dynamic labels context definition =
+      let has_dynamic_field definition context =
+         let Instance (_, fields, _, _) = context in
+         let is_field_dynamic field = (Hashtbl.find fields field).dynamic in
+         StringSet.exists is_field_dynamic (Grammar.field_dependencies definition) in
+      let has_dynamic_attribute definition context  =
+         let is_attribute_dynamic attr_ref = fst (snd (Hashtbl.find labels (resolve_reference context attr_ref))) in
+         AttrRefSet.exists is_attribute_dynamic (Grammar.attribute_dependencies definition) in
+      let is_dynamic_root = has_dynamic_field definition context in
+      (is_dynamic_root || has_dynamic_attribute definition context, is_dynamic_root) in
+   (** Recursively generates a table labelling each (node, attribute) -> (node id, (is dynamic, is dynamic root)) *)
+   let rec label labels counter context =
+      let Instance (class_name, _, children, _) = context in
+      let klass = lookup_class class_name in
+      ListExt.for_each (StringMap.find class_name orderings) (function
+       | EvalAttr (attr_ref) ->
+            let attr_label = ((incr counter; !counter), is_dynamic labels context (List.assoc attr_ref klass.definitions)) in
+            Hashtbl.add labels (resolve_reference context attr_ref) attr_label
+       | EvalChild (child) -> ignore (label labels counter (Hashtbl.find children child)));
+      labels in
+   (** Recursively outputs clusters of attributes grouped by node *)
+   let rec cluster labels counter node =
+      let Instance (class_name, _, children, _) = node in
+      let attributes =
+         let (synthesized, inherited) = StringMap.find class_name contracts in
+         StringSet.union synthesized inherited in
+      Printf.fprintf out "\tsubgraph cluster%i {\n" (incr counter; !counter);
+      Printf.fprintf out "\t\tlabel = \"%s\";\n" class_name;
+      StringSet.iter (fun attr ->
+         let (node_id, (node_is_dynamic, node_is_dynamic_root)) = Hashtbl.find labels (node, attr) in
+         Printf.fprintf out "\t\tn%i [label=\"@%s\",color=%s,fillcolor=%s,style=filled];\n"
+            node_id attr (if node_is_dynamic then "red" else "black") (if node_is_dynamic_root then "yellow" else "none")) attributes;
+      Printf.fprintf out "\t}\n\n";
+      Hashtbl.iter (fun _ child -> cluster labels counter child) children in
+   (** Sets of edges to prevent duplication *)
+   let module EdgeSet = Set.Make(struct type t = int * int let compare = compare end) in
+   (** Recursively outputs dependency edges in the tree *)
+   let rec connect labels emitted node =
+      let emit_edge source_attr_ref target_attr_ref =
+         let (source_id, (source_dynamic, _)) = Hashtbl.find labels (resolve_reference node source_attr_ref) in
+         let (target_id, _) = Hashtbl.find labels (resolve_reference node target_attr_ref) in
+         if not (EdgeSet.mem (source_id, target_id) !emitted) then
+            (Printf.fprintf out "\t\tn%i -> n%i [color=%s];\n" source_id target_id (if source_dynamic then "red" else "black");
+             emitted := EdgeSet.add (source_id, target_id) !emitted) in
+      let Instance (class_name, _, children, _) = node in
+      ListExt.for_each (lookup_class class_name).definitions (fun (target_attr_ref, definition) ->
+         AttrRefSet.iter (fun source_attr_ref -> emit_edge source_attr_ref target_attr_ref) (Grammar.attribute_dependencies definition));
+      Hashtbl.iter (fun _ child -> connect labels emitted child) children in
+   
+   (* Output the dependency graph *)
+   Printf.fprintf out "digraph treedeps {\n";
+   Printf.fprintf out "\tranksep = \"1.2 equally\";\n";
+   let labels = label (Hashtbl.create 16) (ref 0) tree in
+   cluster labels (ref 0) tree;
+   connect labels (ref EdgeSet.empty) tree;
+   Printf.fprintf out "}\n"
