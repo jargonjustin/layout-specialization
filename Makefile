@@ -1,9 +1,9 @@
-BUILDFLAGS=-cflag -g -lflag -g
+BUILDFLAGS=-cflag -g -lflag -g -lib graphics
 
 all: main.native
 
 clean:
-	rm -rf main.native _build
+	ocamlbuild -clean
 
 main.native: src/*
 	ocamlbuild ${BUILDFLAGS} src/main.native
