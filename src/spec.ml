@@ -53,16 +53,17 @@ let reset =
    Stream.iter (fun inst ->
       let Inst (Instance (_, _, _, attributes), _, _, _) = inst in Hashtbl.clear attributes)
 
+(** Determines the relationship between an attribute being set and its context node *)
+let reconstruct data attr context =
+   if data == context then
+      SelfAttrRef attr
+   else
+      let Instance (_, _, children, _) = context in
+      let (child, _) = HashtblExt.search children (fun _ klass -> data == klass) in
+      ChildAttrRef (child, attr)
+
 (** Dumps an instruction stream for debugging *)
 let examine out =
-   (** Determines the relationship between an attribute being set and its context node *)
-   let reconstruct data attr context =
-      if data == context then
-         SelfAttrRef attr
-      else
-         let Instance (_, _, children, _) = context in
-         let (child, _) = HashtblExt.search children (fun _ klass -> data == klass) in
-         ChildAttrRef (child, attr) in
    (** Dumps an instrction to stderr *)
    let print_reconstruction instruction =
       let Inst (data, attr, context, expr) = instruction in
