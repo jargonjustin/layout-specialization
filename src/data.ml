@@ -117,6 +117,16 @@ let graph out klasses contracts orderings tree =
    (** Looks up a class by name *)
    let lookup_class name =
       List.find (fun klass -> klass.name = name) klasses in
+   (* Bound attribute tables *)
+   (* For some reason, the polymorphic Hashtbl doesn't correctly handle instance data, so we use our own *)
+   let module LabelHashedType =
+      struct
+         type t = data * string
+         let equal (n1, a1) (n2, a2) = (n1 == n2) && (a1 = a2)
+         let hash (Instance (klass, fields, children, _), attr) =
+            (Hashtbl.hash klass) lxor (Hashtbl.hash fields) lxor (Hashtbl.hash children) lxor (Hashtbl.hash attr)
+      end in
+   let module Labeltbl = Hashtbl.Make(LabelHashedType) in
    (** Checks if an attribute definition is dynamic in a particular context *)
    let is_dynamic labels context definition =
       let has_dynamic_field definition context =
@@ -124,7 +134,7 @@ let graph out klasses contracts orderings tree =
          let is_field_dynamic field = (Hashtbl.find fields field).dynamic in
          StringSet.exists is_field_dynamic (Grammar.field_dependencies definition) in
       let has_dynamic_attribute definition context  =
-         let is_attribute_dynamic attr_ref = fst (snd (Hashtbl.find labels (resolve_reference context attr_ref))) in
+         let is_attribute_dynamic attr_ref = fst (snd (Labeltbl.find labels (resolve_reference context attr_ref))) in
          AttrRefSet.exists is_attribute_dynamic (Grammar.attribute_dependencies definition) in
       let is_dynamic_root = has_dynamic_field definition context in
       (is_dynamic_root || has_dynamic_attribute definition context, is_dynamic_root) in
@@ -135,7 +145,7 @@ let graph out klasses contracts orderings tree =
       ListExt.for_each (StringMap.find class_name orderings) (function
        | EvalAttr (attr_ref) ->
             let attr_label = ((incr counter; !counter), is_dynamic labels context (List.assoc attr_ref klass.definitions)) in
-            Hashtbl.add labels (resolve_reference context attr_ref) attr_label
+            Labeltbl.add labels (resolve_reference context attr_ref) attr_label
        | EvalChild (child) -> ignore (label labels counter (Hashtbl.find children child)));
       labels in
    (** Recursively outputs clusters of attributes grouped by node *)
@@ -147,7 +157,7 @@ let graph out klasses contracts orderings tree =
       Printf.fprintf out "\tsubgraph cluster%i {\n" (incr counter; !counter);
       Printf.fprintf out "\t\tlabel = \"%s\";\n" class_name;
       StringSet.iter (fun attr ->
-         let (node_id, (node_is_dynamic, node_is_dynamic_root)) = Hashtbl.find labels (node, attr) in
+         let (node_id, (node_is_dynamic, node_is_dynamic_root)) = Labeltbl.find labels (node, attr) in
          Printf.fprintf out "\t\tn%i [label=\"@%s\",color=%s,fillcolor=%s,style=filled];\n"
             node_id attr (if node_is_dynamic then "red" else "black") (if node_is_dynamic_root then "yellow" else "none")) attributes;
       Printf.fprintf out "\t}\n\n";
@@ -157,8 +167,8 @@ let graph out klasses contracts orderings tree =
    (** Recursively outputs dependency edges in the tree *)
    let rec connect labels emitted node =
       let emit_edge source_attr_ref target_attr_ref =
-         let (source_id, (source_dynamic, _)) = Hashtbl.find labels (resolve_reference node source_attr_ref) in
-         let (target_id, _) = Hashtbl.find labels (resolve_reference node target_attr_ref) in
+         let (source_id, (source_dynamic, _)) = Labeltbl.find labels (resolve_reference node source_attr_ref) in
+         let (target_id, _) = Labeltbl.find labels (resolve_reference node target_attr_ref) in
          if not (EdgeSet.mem (source_id, target_id) !emitted) then
             (Printf.fprintf out "\t\tn%i -> n%i [color=%s];\n" source_id target_id (if source_dynamic then "red" else "black");
              emitted := EdgeSet.add (source_id, target_id) !emitted) in
@@ -170,7 +180,7 @@ let graph out klasses contracts orderings tree =
    (* Output the dependency graph *)
    Printf.fprintf out "digraph treedeps {\n";
    Printf.fprintf out "\tranksep = \"1.2 equally\";\n";
-   let labels = label (Hashtbl.create 16) (ref 0) tree in
+   let labels = label (Labeltbl.create 16) (ref 0) tree in
    cluster labels (ref 0) tree;
    connect labels (ref EdgeSet.empty) tree;
    Printf.fprintf out "}\n"
