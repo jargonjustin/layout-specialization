@@ -25,7 +25,7 @@ class Div : Node {
 class Text : Node {
    float margin;
    
-   def @height = margin + @width / 2 + margin;
+   def @height = margin + @width / 16 + margin;
 };
 
 class Window {
