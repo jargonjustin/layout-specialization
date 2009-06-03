@@ -37,10 +37,10 @@ let render tree =
       rgb 0x77 0xc4 0x72;
       rgb 0x91 0x6a 0xb3;
       rgb 0xff 0xfb 0x81;
-      rgb 0xff 0x7c 0x62|]
+      rgb 0xff 0x7c 0x62|] in
    (** Sets the current color to color n in the color palate *)
    let use_color n =
-      set_color colors.(n mod Array.length colors)
+      set_color colors.(n mod Array.length colors) in
    (** Attempts to get the rectangle defined by a node's attributes *)
    let dimensions attributes =
       try
@@ -65,7 +65,7 @@ let render tree =
       let children_depth = if paint depth attributes then depth + 1 else depth in
       Hashtbl.iter (fun _ child ->  draw children_depth child) children in
    draw 0 tree;
-   synchronize
+   synchronize ()
 
 (** Starts the render loop using the specified tree *)
 let run tree =
