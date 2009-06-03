@@ -39,7 +39,7 @@ let dump_instructions bytecode out =
 let dump_annotated tree out =
    Data.pretty_print out tree
 
-let run grammar data depsdump flowdump codedump treedump =
+let run grammar data depsdump flowdump codedump treedump skiprender =
    try
       (* Parse and analyze the grammar *)
       let (ifaces, klasses) = Grammar.parse_channel grammar in
@@ -62,7 +62,8 @@ let run grammar data depsdump flowdump codedump treedump =
       time "Execution" (fun () -> Spec.interpret (Stream.of_list !bytecode));
       maybe () (dump_annotated tree) treedump;
       
-      Render.run tree
+      if not skiprender then
+         Render.run tree
    with
     | Grammar.Invalid_grammar err -> prerr_endline ("error: " ^ err); exit 1
     | Data.Parse_error err -> prerr_endline ("error: " ^ err); exit 1
@@ -73,6 +74,7 @@ let main () =
       let dataflow_channel = ref None in
       let bytecode_channel = ref None in
       let annotated_channel = ref None in
+      let dont_render = ref false in
    
       let usage = "Usage: " ^ Sys.argv.(0) ^ " [options] grammar treefile" in
       let args =
@@ -81,6 +83,7 @@ let main () =
             ("-t",    Arg.Set timings,                        " Display execution time information");
             ("-v",    Arg.Set verbose,                        " Display verbose statistics");
             ("-n",    Arg.Clear specialize,                   " Do not perform specialization");
+            ("-r",    Arg.Set dont_render,                    " Do not attempt to render the layout");
             ("-deps", set_channel dependency_channel, "filename Dump a dependency graph of the grammar");
             ("-flow", set_channel dataflow_channel,   "filename Dump a dataflow graph of the tree");
             ("-code", set_channel bytecode_channel,   "filename Dump the intermediate code");
@@ -92,7 +95,7 @@ let main () =
    
       match !rest with
        | [data_filename; grammar_filename] ->
-          run (open_in grammar_filename) (open_in data_filename) !dependency_channel !dataflow_channel !bytecode_channel !annotated_channel
+          run (open_in grammar_filename) (open_in data_filename) !dependency_channel !dataflow_channel !bytecode_channel !annotated_channel !dont_render
        | _ -> Arg.usage args usage
    with
     | Sys_error err -> prerr_endline ("error: " ^ err); exit 1
