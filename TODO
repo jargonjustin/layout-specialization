@@ -1,0 +1,9 @@
+- Remove field / child separation
+    - Compiled instruction stream may contain EvalChild instructions (interpret subtree)
+- Richer expression language
+    - Separate parser AST and typed representation
+- Specialized animations in renderer
+    - Runtime detection of dynamic fields
+    - Simple animation language
+    - Cheaper static -> dynamic invalidation
+- Functors for better defined interfaces and language flexibility

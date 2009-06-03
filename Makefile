@@ -4,7 +4,7 @@ all: main.native
 
 clean:
 	ocamlbuild -clean
-	rm -f deps.gv flow.gv
+	rm -f deps.gv flow.gv deps.png flow.png
 
 main.native: src/*
 	ocamlbuild ${BUILDFLAGS} src/main.native
