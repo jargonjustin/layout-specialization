@@ -342,10 +342,10 @@ let graph_dependencies out klasses contracts =
       ListExt.for_each nodes (fun node ->
          let id = get_id () in
          Hashtbl.replace ids node id;
-         Printf.printf "\t\tn%i [label=\"%s\"];\n" id (string_of_eval_step node));
+         Printf.fprintf out "\t\tn%i [label=\"%s\"];\n" id (string_of_eval_step node));
 
       ListExt.for_each edges (fun (initial, target) ->
-         Printf.printf "\t\tn%i -> n%i;\n" (Hashtbl.find ids initial) (Hashtbl.find ids target));
+         Printf.fprintf out "\t\tn%i -> n%i;\n" (Hashtbl.find ids initial) (Hashtbl.find ids target));
 
       Printf.fprintf out "\t};\n");
 
