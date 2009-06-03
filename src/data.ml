@@ -178,7 +178,7 @@ let graph out klasses contracts orderings tree =
          let (source_id, (source_dynamic, _)) = Labeltbl.find labels (resolve_reference node source_attr_ref) in
          let (target_id, _) = Labeltbl.find labels (resolve_reference node target_attr_ref) in
          if not (EdgeSet.mem (source_id, target_id) !emitted) then
-            (Printf.fprintf out "\t\tn%i -> n%i [color=%s];\n" source_id target_id (if source_dynamic then "red" else "black");
+            (Printf.fprintf out "\tn%i -> n%i [color=%s];\n" source_id target_id (if source_dynamic then "red" else "black");
              emitted := EdgeSet.add (source_id, target_id) !emitted) in
       let Instance (class_name, _, children, _) = node in
       ListExt.for_each (lookup_class class_name).definitions (fun (target_attr_ref, definition) ->
