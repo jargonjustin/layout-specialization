@@ -5,7 +5,7 @@ open Util
 exception Parse_error of string
 
 (** Parses a data file containing instances of the provided classes *)
-let parse_stream klasses stream =
+let parse_stream klasses contracts stream =
    (** Looks up a class definition by name *)
    let lookup_class name =
       try List.find (fun klass -> klass.name = name) klasses with Not_found -> raise (Parse_error ("Class " ^ name ^ " is not defined")) in
@@ -54,15 +54,23 @@ let parse_stream klasses stream =
       | [< 'Genlex.Float x >] -> `Field {dynamic=is_dynamic; value=x}
       | [< data = parse_data >] -> `Child data
    in try
-      parse_data (lexer stream)
+      (* Parse the tree *)
+      let tree = parse_data (lexer stream) in
+      (* Make sure the root node doesn't require attributes be set *)
+      let () =
+         let Instance (klass, _, _, _) = tree in
+         let (_, inherited) = StringMap.find klass contracts in
+         if not (StringSet.is_empty inherited) then
+            raise (Parse_error ("The root node in a data tree must not have any inherited attributes (class " ^ klass ^ " is not suitable)")) in
+      tree
    with
       | Stream.Error _ -> raise (Parse_error "data syntax error")
 
-let parse_channel klasses channel =
-   parse_stream klasses (Stream.of_channel channel)
+let parse_channel klasses contracts channel =
+   parse_stream klasses contracts (Stream.of_channel channel)
 
-let parse_file klasses filename =
-   parse_channel klasses (open_in filename)
+let parse_file klasses contracts filename =
+   parse_channel klasses contracts (open_in filename)
 
 (** Creates an instruction stream to evaluate an attribute grammar *)
 let rec compile klasses orderings data = 

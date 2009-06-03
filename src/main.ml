@@ -47,7 +47,7 @@ let run grammar data depsdump flowdump codedump treedump skiprender =
       maybe () (dump_dependencies klasses contracts) depsdump;
       
       (* Parse the data tree *)
-      let tree = Data.parse_channel klasses data in
+      let tree = Data.parse_channel klasses contracts data in
       maybe () (dump_dataflow klasses contracts orderings tree) flowdump;
       
       (* Compile and specialize to intermediate code *)
