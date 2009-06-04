@@ -77,3 +77,46 @@ module HashtblExt =
           | Some result -> result
           | None -> raise Not_found
    end
+
+module type PRIORITYQUEUE =
+   sig
+      type 'a t
+      type priority = int
+      
+      exception Queue_is_empty
+      
+      val empty : 'a t
+      val enqueue : 'a t -> priority -> 'a -> 'a t
+      val dequeue : 'a t -> priority * 'a * 'a t
+   end
+
+module PriorityQueue : PRIORITYQUEUE =
+   struct
+      type priority = int
+      type 'a t = Empty | Node of priority * 'a * 'a t * 'a t
+      
+      exception Queue_is_empty
+      
+      let empty = Empty
+      let rec enqueue queue priority elem =
+         match queue with
+          | Empty -> Node (priority, elem, Empty, Empty)
+          | Node (qp, qe, lhs, rhs) ->
+               if priority <= qp
+                  then Node (qp, qe, enqueue rhs priority elem, lhs)
+                  else Node (priority, elem, enqueue rhs qp qe, lhs)
+      let dequeue queue =
+         let rec pop = function
+          | Empty -> raise Queue_is_empty
+          | Node (qp, elem, lhs, Empty) -> lhs
+          | Node (qp, elem, Empty, rhs) -> rhs
+          | Node (qp, elem, (Node (lp, lelem, _, _) as lhs),
+                            (Node (rp, relem, _, _) as rhs)) ->
+               if lp <= rp
+                  then Node (lp, lelem, pop lhs, rhs)
+                  else Node (rp, relem, lhs, pop rhs) in
+         match queue with
+          | Empty -> raise Queue_is_empty
+          | Node (priority, elem, _, _) as node -> (priority, elem, pop node)
+   end
+
