@@ -7,3 +7,6 @@
     - Simple animation language
     - Cheaper static -> dynamic invalidation
 - Functors for better defined interfaces and language flexibility
+
+- Support comments in source files
+- Better syntax errors for source files
