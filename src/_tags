@@ -1,3 +1,4 @@
 "util.ml":	camlp4o
 "data.ml":	camlp4o
 "spec.ml":	camlp4o
+"render.ml":	thread

@@ -1,4 +1,4 @@
-BUILDFLAGS=-cflag -g -lflag -g -lib graphics
+BUILDFLAGS=-cflag -g -lflag -g -libs unix,graphics,threads/threads
 
 all: main.native
 
