@@ -54,21 +54,14 @@ let render tree =
       and height = int_of_float (Hashtbl.find attributes "height") in
       Some (x, y, width, height)
     with Not_found -> None in
-  (* Resize the window to match tree so the new values may be used but `paint` *)
-  begin match sizeof tree with
-  | Some (width, height) -> resize_window width height
-  | None -> ()
-  end;
   (** Attempts to paint the node's attributes, returning true on success *)
-  let paint =
-    let sy = size_y () in
-    fun depth attributes ->
-      match dimensions attributes with
-      | Some (x, y, w, h) ->
-          use_color depth;
-          fill_rect x (sy - y - h) w h;
-          true
-      | None -> false in
+  let paint depth attributes =
+    match dimensions attributes with
+    | Some (x, y, w, h) ->
+        use_color depth;
+        fill_rect x (size_y () - y - h) w h;
+        true
+    | None -> false in
   (** Attempts to paint a node and then recursively draw its children *)
   let rec draw depth node =
     let Instance (_, _, children, attributes) = node in
@@ -86,11 +79,24 @@ let time task thunk =
   result
 
 (** Starts the render loop using the specified tree *)
-let run tree =
+let run bytecode tree animations =
   open_graph "";
   set_window_title "Specialized Layout Rendering";
   auto_synchronize false;
+  
+  begin match sizeof tree with
+  | Some (width, height) -> resize_window width height
+  | None -> ()
+  end;
+  
+  let started = Unix.gettimeofday () in
+  let animating = ref animations in
   periodically ~until:key_pressed 0.01 (fun () -> begin
-    time "Render" (fun () -> render tree)
+    time "Layout and render" (fun () -> begin
+      animating := Anim.step (fun field value -> field.value <- value) (Unix.gettimeofday () -. started) !animating;
+      Spec.interpret (Stream.of_list bytecode);
+      render tree
+    end)
   end);
+  
   close_graph ()
