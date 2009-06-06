@@ -72,6 +72,12 @@ let parse_channel klasses contracts channel =
 let parse_file klasses contracts filename =
    parse_channel klasses contracts (open_in filename)
 
+(** Clears the attributes of a tree and its children *)
+let rec clear tree =
+  let Instance (_, _, children, attributes) = tree in
+  Hashtbl.clear attributes;
+  Hashtbl.iter (fun _ child -> clear child) children
+
 (** Creates an instruction stream to evaluate an attribute grammar *)
 let rec compile klasses orderings data = 
    let Instance (name, _, children, _) = data in
