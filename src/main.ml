@@ -53,9 +53,9 @@ let run grammar data depsdump flowdump codedump treedump skiprender =
       (* Compile and specialize to intermediate code *)
       let bytecode = ref (time "Compilation" (fun () -> StreamExt.elements (Data.compile klasses orderings tree))) in
       log ("Compilation produced " ^ string_of_int (List.length !bytecode) ^ " attribute assignments");
-      (* if !specialize then
+      if !specialize then
          (bytecode := time "Specialization" (fun () -> StreamExt.elements (Spec.specialize (Stream.of_list !bytecode)));
-          log ("Specialization kept " ^ string_of_int (List.length !bytecode) ^ " attribute assignments")); *)
+          log ("Specialization kept " ^ string_of_int (List.length !bytecode) ^ " attribute assignments"));
       maybe () (dump_instructions !bytecode) codedump;
       
       (* Perform any dynamic execution to finish annotation *)

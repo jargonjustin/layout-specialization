@@ -3,7 +3,7 @@
    root: {Div
       margin: 10;
       top: {Div
-         margin: 10;
+         margin: dynamic 10;
          top: {Div
             margin: 10;
             top: {Text margin: 10; };
