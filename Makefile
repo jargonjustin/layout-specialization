@@ -13,11 +13,11 @@ test: main.native
 	OCAMLRUNPARAM='b' ./main.native -t -v samples/minimal.lag samples/minimal.layout
 
 deps: main.native
-	OCAMLRUNPARAM='b' ./main.native -r -deps deps.gv samples/minimal.lag samples/minimal.layout
+	OCAMLRUNPARAM='b' ./main.native -deps deps.gv samples/minimal.lag samples/minimal.layout
 	dot -Tpng deps.gv > deps.png
 	open deps.png
 
 flow: main.native
-	OCAMLRUNPARAM='b' ./main.native -r -flow flow.gv samples/minimal.lag samples/minimal.layout
+	OCAMLRUNPARAM='b' ./main.native -flow flow.gv samples/minimal.lag samples/minimal.layout
 	dot -Tpng flow.gv > flow.png
 	open flow.png
