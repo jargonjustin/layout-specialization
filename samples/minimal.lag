@@ -6,7 +6,7 @@ interface Node {
    inherit @y;
 };
 
-class Div : Node {
+class Block : Node {
    float margin;
    Node top;
    Node bottom;
@@ -22,7 +22,7 @@ class Div : Node {
    def bottom@y = @y + top@height;
 };
 
-class Text : Node {
+class Inline : Node {
    float margin;
    
    def @height = margin + @width / 16 + margin;

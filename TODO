@@ -2,6 +2,7 @@
     - Compiled instruction stream may contain EvalChild instructions (interpret subtree)
 - Richer expression language
     - Separate parser AST and typed representation
+    - Induction over sequence children
 - Specialized animations in renderer
     - Runtime detection of dynamic fields
     - Simple animation language

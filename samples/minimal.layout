@@ -1,31 +1,31 @@
 {Window
    width: 800;
-   root: {Div
+   root: {Block
       margin: 10;
-      top: {Div
+      top: {Block
          margin: dynamic 10;
-         top: {Div
+         top: {Block
             margin: 10;
-            top: {Text margin: 10; };
-            bottom: {Text margin: 10; };
+            top: {Inline margin: 10; };
+            bottom: {Inline margin: 10; };
          };
-         bottom: {Div
+         bottom: {Block
             margin: 10;
-            top: {Text margin: 10; };
-            bottom: {Text margin: 10; };
+            top: {Inline margin: 10; };
+            bottom: {Inline margin: 10; };
          };
       };
-      bottom: {Div
+      bottom: {Block
          margin: 10;
-         top: {Div
+         top: {Block
             margin: 10;
-            top: {Text margin: 10; };
-            bottom: {Text margin: 10; };
+            top: {Inline margin: 10; };
+            bottom: {Inline margin: 10; };
          };
-         bottom: {Div
+         bottom: {Block
             margin: 10;
-            top: {Text margin: 10; };
-            bottom: {Text margin: 10; };
+            top: {Inline margin: 10; };
+            bottom: {Inline margin: 10; };
          };
       };
    };
