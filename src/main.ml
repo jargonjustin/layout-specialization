@@ -75,7 +75,7 @@ let main () =
       let dataflow_channel = ref None in
       let bytecode_channel = ref None in
       let annotated_channel = ref None in
-      let dont_render = ref false in
+      let dont_render = ref true in
    
       let usage = "Usage: " ^ Sys.argv.(0) ^ " [options] grammar treefile" in
       let args =
@@ -84,7 +84,7 @@ let main () =
             ("-t",    Arg.Set timings,                        " Display execution time information");
             ("-v",    Arg.Set verbose,                        " Display verbose statistics");
             ("-n",    Arg.Clear specialize,                   " Do not perform specialization");
-            ("-r",    Arg.Set dont_render,                    " Do not attempt to render the layout");
+            ("-r",    Arg.Clear dont_render,                  " Attempt to render and animate the layout");
             ("-deps", set_channel dependency_channel, "filename Dump a dependency graph of the grammar");
             ("-flow", set_channel dataflow_channel,   "filename Dump a dataflow graph of the tree");
             ("-code", set_channel bytecode_channel,   "filename Dump the intermediate code");
